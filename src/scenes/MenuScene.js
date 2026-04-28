@@ -9,7 +9,7 @@
         this.load.image('btn_start', 'assets/btn_start.png');
         this.load.image('btn_settings', 'assets/btn_setting.png');
         this.load.image('btn_credits', 'assets/btn_credit.png');
-        this.load.image('icon_achievement', 'assets/icon_achievement.png');
+        this.load.image('icon_achievement', 'assets/achievement.png');
         this.load.image('icon_character', 'assets/icon_character.png');
     }
 
