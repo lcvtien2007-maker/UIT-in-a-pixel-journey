@@ -3,115 +3,93 @@
         super('WorldMapScene');
     }
 
+    init() {
+        // Trạng thái mở khóa của 5 Kỷ nguyên tại UIT
+        this.erasStatus = {
+            'era1': true,  // Era 1 (ví dụ: Tòa A) - Mặc định mở
+            'era2': false, // Era 2 (ví dụ: Tòa B)
+            'era3': false, 
+            'era4': false,
+            'era5': false
+        };
+    }
+
+    preload() {
+        // Tải 10 mảnh bản đồ (5 sáng, 5 tối)
+        // Yêu cầu tên file chính xác như em đã cấu hình:
+        for (let i = 1; i <= 5; i++) {
+            this.load.image(`era${i}_light`, `assets/era${i}-light.png`);
+            this.load.image(`era${i}_dark`, `assets/era${i}-dark.PNG`);
+        }
+    }
+
     create() {
-        this.cameras.main.setBackgroundColor('#111111'); // Nền tối hơn một chút
-        const width = this.scale.width;
-        const height = this.scale.height;
+        const centerX = 480; // 960 / 2
+        const centerY = 270; // 540 / 2
 
-        // --- 1. Tiêu đề và Nút Back ---
-        this.add.text(width / 2, 20, 'SELECT ERA', {
-            fontSize: '16px',
-            fill: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
+        // CHÚ Ý CHỖ NÀY: Khởi chạy UIScene phải nằm TẠI ĐÂY
+        this.scene.launch('UIScene');
 
-        const backBtn = this.add.text(20, 15, '< BACK', {
-            fontSize: '10px',
-            fill: '#aaaaaa'
-        }).setInteractive({ useHandCursor: true });
-        backBtn.on('pointerdown', () => this.scene.start('MenuScene'));
+        // Duyệt qua từng kỷ nguyên để vẽ
+        for (let i = 1; i <= 5; i++) {
+            const eraKey = `era${i}`;
+            const isUnlocked = this.erasStatus[eraKey];
+            
+            // Chọn ảnh Sáng hoặc Tối dựa trên trạng thái
+            const texture = isUnlocked ? `${eraKey}_light` : `${eraKey}_dark`;
 
-        // --- 2. Dữ liệu 5 Kỷ nguyên (Nâng cao) ---
-        // Thêm thuộc tính coords để định vị chính xác trên "con đường"
-        const erasData = [
-            { id: 1, year: '2006', title: 'ERA 1', coords: { x: 60, y: 130 }, unlocked: true },
-            { id: 2, year: '2011', title: 'ERA 2', coords: { x: 130, y: 100 }, unlocked: false },
-            { id: 3, year: '2016', title: 'ERA 3', coords: { x: 200, y: 130 }, unlocked: false },
-            { id: 4, year: '2021', title: 'ERA 4', coords: { x: 260, y: 80 }, unlocked: false },
-            { id: 5, year: '2026', title: 'ERA 5', coords: { x: 300, y: 140 }, unlocked: false }
-        ];
+            // VẼ VÙNG ĐẤT
+            const region = this.add.image(centerX, centerY, texture);
 
-        // --- 3. Vẽ Con Đường (Dotted Path) ---
-        this.drawPath(erasData);
+            if (isUnlocked) {
+                // Vùng đã mở
+                region.setInteractive({ useHandCursor: true, pixelPerfect: true });
 
-        // --- 4. Vẽ các nút Era và Hiệu ứng Sương mù ---
-        erasData.forEach((era) => {
-            this.createEraNode(era);
+                region.on('pointerover', () => region.setTint(0xffffff));
+                region.on('pointerout', () => region.clearTint());
+                
+                region.on('pointerdown', () => {
+                    console.log(`Tiến vào Kỷ nguyên ${i}`);
+                    // Sau này gỡ comment dòng dưới để vào màn chơi thật:
+                    this.scene.start(`Era${i}Scene`);
+                });
+            } else {
+                // VÙNG BỊ KHÓA: Gọi UI Hộp thoại Cốt truyện
+                region.setInteractive({ pixelPerfect: true });
+                
+                region.on('pointerdown', () => { 
+                    this.cameras.main.shake(100, 0.005); // Rung màn hình
+
+                    // Thiết lập kịch bản cốt truyện tùy theo khu vực
+                    let storyList = [];
+                    
+                    if (i === 2) {
+                        storyList = [
+                            { name: 'Hệ thống', text: 'Khu vực Tòa B hiện đang bị phong tỏa. Cần thẻ sinh viên để qua cổng!' },
+                            { name: 'Nhân vật chính', text: 'Chết tiệt, thẻ của mình để quên ở Era 1 mất rồi...' },
+                            { name: 'Đồng đội', text: 'Mau quay lại tìm thôi!' }
+                        ];
+                    } else if (i === 3) {
+                        storyList = [
+                            { name: 'Kẻ Gác Cổng', text: 'Ngươi chưa đủ cấp độ để tiến vào khu vực Đồ Sắt.' },
+                            { name: 'Kẻ Gác Cổng', text: 'Hãy vượt qua thử thách của Thầy Duy và Thầy Kiên trước đã!' }
+                        ];
+                    } else {
+                        // Kịch bản mặc định cho Era 4, 5
+                        storyList = [
+                            { name: 'Hệ thống', text: 'Kỷ nguyên này vẫn đang chìm trong sương mù lịch sử...' }
+                        ];
+                    }
+
+                    // Phát tín hiệu đánh thức UIScene hiện hộp thoại
+                    this.registry.events.emit('SHOW_DIALOGUE_SERIES', storyList);
+                });
+            }
+        }
+
+        // Thêm các thành phần giao diện khác
+        this.add.text(20, 20, "BẢN ĐỒ KỶ NGUYÊN UIT", {
+            fontSize: '20px', fill: '#ffffff', fontStyle: 'bold'
         });
-    }
-
-    // Hàm vẽ đường nối zigzag
-    drawPath(data) {
-        const graphics = this.add.graphics();
-        graphics.lineStyle(2, 0xaaaaaa, 0.5); // Đường kẻ xám, hơi trong suốt
-
-        // Bắt đầu vẽ từ Era 1
-        graphics.beginPath();
-        graphics.moveTo(data[0].coords.x, data[0].coords.y);
-
-        // Vẽ đường nối tới các Era tiếp theo
-        for (let i = 1; i < data.length; i++) {
-            graphics.lineTo(data[i].coords.x, data[i].coords.y);
-        }
-
-        graphics.strokePath();
-    }
-
-    // Hàm tiện ích vẽ một nút Era (Node)
-    createEraNode(era) {
-        const { x, y } = era.coords;
-        const isUnlocked = era.unlocked;
-
-        // --- A. Phần hiển thị chính của Era (Hình khối placeholder) ---
-        // Nếu unlocked thì màu xanh UIT, nếu locked thì màu xám tối
-        const mainColor = isUnlocked ? 0x00ff00 : 0x444444;
-
-        // Vẽ hình thoi/lá chắn đại diện (giống ảnh tham khảo)
-        const node = this.add.polygon(x, y, [0, -15, 15, 0, 0, 15, -15, 0], mainColor)
-            .setOrigin(0.5);
-
-        // Chữ ghi năm (Year)
-        const yearText = this.add.text(x, y, era.year, {
-            fontSize: '10px',
-            fill: isUnlocked ? '#000000' : '#888888',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-
-        // Chữ ghi Era Title (Ví dụ: ERA 1)
-        this.add.text(x, y + 22, era.title, {
-            fontSize: '8px',
-            fill: isUnlocked ? '#ffffff' : '#555555'
-        }).setOrigin(0.5);
-
-        // --- B. Xử lý Logic Tương tác ---
-        if (isUnlocked) {
-            node.setInteractive({ useHandCursor: true });
-
-            // Hiệu ứng hover
-            node.on('pointerover', () => {
-                node.setFillStyle(0xffff00); // Sáng màu vàng
-                yearText.setStyle({ fill: '#000000' });
-            });
-            node.on('pointerout', () => {
-                node.setFillStyle(mainColor); // Về màu xanh
-                yearText.setStyle({ fill: '#000000' });
-            });
-
-            // Click để vào game
-            node.on('pointerdown', () => {
-                console.log(`Đang vào ${era.title} (${era.year})...`);
-                // this.scene.start('Era1Scene');
-            });
-        }
-        // --- C. Hiệu ứng Sương mù (Placeholder) ---
-        else {
-            // Chúng ta dùng một hình tròn đen, bán trong suốt để "che" Era lại
-            // Nó tạo cảm giác Era bị chìm vào bóng tối/sương mù
-            this.add.circle(x, y, 25, 0x000000, 0.6)
-                .setOrigin(0.5);
-
-            // Thêm biểu tượng ổ khóa nhỏ
-            this.add.text(x, y - 5, '🔒', { fontSize: '12px' }).setOrigin(0.5);
-        }
     }
 }
