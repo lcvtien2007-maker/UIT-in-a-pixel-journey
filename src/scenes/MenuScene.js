@@ -11,6 +11,7 @@
         this.load.image('btn_credits', 'assets/btn_credit.png');
         this.load.image('icon_achievement', 'assets/achievement.png');
         this.load.image('icon_character', 'assets/icon_character.png');
+        this.load.audio('bgm_menu', 'assets/bgm_menu.mp3');
     }
 
     create() {
@@ -82,7 +83,15 @@
                 btn.y += 3;
             });
         });
-
+        // phát nhạc nền
+        // Kiểm tra nếu nhạc chưa được phát thì mới bắt đầu phát
+        if (!this.sound.get('bgm_menu')) {
+        const music = this.sound.add('bgm_menu', { 
+            loop: true, 
+            volume: 0.5 // Âm lượng khởi tạo 50%
+        });
+        music.play();
+    }
         // 6. CHỖ TRỐNG CHO NHÂN VẬT (Góc dưới bên trái theo bản vẽ)
         // Sau này em có thể thêm: this.add.sprite(250, 400, 'player_idle');
     }

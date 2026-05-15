@@ -3,70 +3,59 @@
         super('SettingsScene');
     }
 
+    preload() {
+        // Tải các ảnh cho giao diện Setting (960x540)
+        this.load.image('settings_bg', 'assets/settings_bg.png');
+        this.load.image('slider_track', 'assets/slider_track.png');
+        this.load.image('slider_handle', 'assets/slider_handle.png');
+        this.load.image('btn_mute_on', 'assets/btn_mute_on.png');
+        this.load.image('btn_mute_off', 'assets/btn_mute_off.png');
+        this.load.image('btn_back', 'assets/btn_back.png');
+    }
+
     create() {
-        this.cameras.main.setBackgroundColor('#111111');
-        const width = this.scale.width;
-        const height = this.scale.height;
+        const centerX = 480; // 960 / 2
+        const centerY = 270; // 540 / 2
 
-        this.add.text(width / 2, 20, 'SETTINGS', { fontSize: '16px', fontStyle: 'bold' }).setOrigin(0.5);
+        // 1. Vẽ nền bảng cài đặt
+        this.add.image(centerX, centerY, 'settings_bg');
 
-        // --- 1. ÂM THANH (Dạng thanh trượt giả lập) ---
-        this.add.text(40, 50, 'SOUND', { fontSize: '10px' });
-        this.createSlider(width / 2 + 40, 55, 0.8); // Mặc định 80%
+        // 2. Logic Nút Mute (Bật/Tắt tiếng)
+        const muteKey = this.sound.mute ? 'btn_mute_off' : 'btn_mute_on';
+        const btnMute = this.add.image(centerX, 180, muteKey).setInteractive({ useHandCursor: true });
 
-        // --- 2. NHẠC (Dạng thanh trượt giả lập) ---
-        this.add.text(40, 80, 'MUSIC', { fontSize: '10px' });
-        this.createSlider(width / 2 + 40, 85, 0.5); // Mặc định 50%
-
-        // --- 3. VFX (Dạng Bật/Tắt) ---
-        this.add.text(40, 110, 'VFX EFFECTS', { fontSize: '10px' });
-        this.createToggle(width / 2 + 40, 110, true);
-
-        // --- 4. KHUNG HÌNH (FPS Display) ---
-        this.add.text(40, 140, 'SHOW FPS', { fontSize: '10px' });
-        this.createToggle(width / 2 + 40, 140, false);
-
-        // Nút Back về Menu
-        const backBtn = this.add.text(width / 2, 170, 'SAVE & EXIT', { fontSize: '10px', fill: '#ffff00' })
-            .setOrigin(0.5).setInteractive({ useHandCursor: true });
-        backBtn.on('pointerdown', () => this.scene.start('MenuScene'));
-    }
-
-    // Hàm tạo thanh trượt (Slider)
-    createSlider(x, y, initialValue) {
-        const sliderWidth = 100;
-        // Thanh nền
-        this.add.rectangle(x, y, sliderWidth, 4, 0x333333).setOrigin(0, 0.5);
-        // Thanh giá trị
-        const progress = this.add.rectangle(x, y, sliderWidth * initialValue, 4, 0x00ff00).setOrigin(0, 0.5);
-        // Nút kéo
-        const handle = this.add.circle(x + (sliderWidth * initialValue), y, 6, 0xffffff)
-            .setInteractive({ draggable: true });
-
-        handle.on('drag', (pointer, dragX) => {
-            // Giới hạn nút kéo trong phạm vi thanh nền
-            dragX = Phaser.Math.Clamp(dragX, x, x + sliderWidth);
-            handle.x = dragX;
-            progress.width = dragX - x;
-
-            let volume = (dragX - x) / sliderWidth;
-            console.log("Volume changed to: " + Math.round(volume * 100) + "%");
+        btnMute.on('pointerdown', () => {
+            this.sound.mute = !this.sound.mute; // Đảo trạng thái âm thanh toàn game
+            btnMute.setTexture(this.sound.mute ? 'btn_mute_off' : 'btn_mute_on');
         });
-    }
 
-    // Hàm tạo nút Bật/Tắt (Toggle)
-    createToggle(x, y, initialState) {
-        let state = initialState;
-        const toggleBtn = this.add.text(x, y, state ? '[ ON ]' : '[ OFF ]', {
-            fontSize: '10px',
-            fill: state ? '#00ff00' : '#ff0000'
-        }).setInteractive({ useHandCursor: true });
+        // 3. Logic Thanh trượt âm lượng (Slider)
+        const track = this.add.image(centerX, 300, 'slider_track');
+        
+        // Xác định giới hạn kéo của nút trượt trên thanh
+        const minX = centerX - track.displayWidth / 2;
+        const maxX = centerX + track.displayWidth / 2;
 
-        toggleBtn.on('pointerdown', () => {
-            state = !state;
-            toggleBtn.setText(state ? '[ ON ]' : '[ OFF ]');
-            toggleBtn.setStyle({ fill: state ? '#00ff00' : '#ff0000' });
-            console.log("Toggle changed to: " + state);
+        // Đặt nút trượt ở vị trí tương ứng với âm lượng hiện tại của game
+        const startX = Phaser.Math.Linear(minX, maxX, this.sound.volume);
+        const handle = this.add.image(startX, 300, 'slider_handle')
+            .setInteractive({ draggable: true, useHandCursor: true });
+
+        // Xử lý sự kiện kéo (Drag)
+        this.input.setDraggable(handle);
+        this.input.on('drag', (pointer, gameObject, dragX) => {
+            // Chỉ cho phép kéo trong phạm vi thanh trượt
+            gameObject.x = Phaser.Math.Clamp(dragX, minX, maxX);
+
+            // Tính toán % âm lượng dựa trên vị trí nút trượt (0.0 đến 1.0)
+            const newVolume = Phaser.Math.Percent(gameObject.x, minX, maxX);
+            
+            // CẬP NHẬT ÂM THANH TOÀN CỤC NGAY LẬP TỨC
+            this.sound.setVolume(newVolume); 
         });
+
+        // 4. Nút quay lại Menu
+        const btnBack = this.add.image(centerX, 450, 'btn_back').setInteractive({ useHandCursor: true });
+        btnBack.on('pointerdown', () => this.scene.start('MenuScene'));
     }
 }

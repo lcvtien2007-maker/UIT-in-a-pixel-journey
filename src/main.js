@@ -1,6 +1,7 @@
 ﻿import MenuScene from './scenes/MenuScene.js';
 import WorldMapScene from './scenes/WorldMapScene.js';
 import SettingsScene from './scenes/SettingsScene.js';
+import UIScene from './scenes/UIScene.js';
 
 const config = {
     type: Phaser.AUTO,
@@ -24,7 +25,15 @@ const config = {
         arcade: { gravity: { y: 0 }, debug: false }
     },
 
-    scene: [MenuScene, WorldMapScene, SettingsScene]
+    scene: [
+    //BootScene,
+    //PreloadScene,
+    MenuScene,
+    SettingsScene,
+    WorldMapScene,
+    //Era1Scene, // (Các scene có sẵn của em)
+    UIScene    // <--- THÊM DÒNG NÀY VÀO ĐÂY NHÉ!
+]
 };
 
 new Phaser.Game(config);
